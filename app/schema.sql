@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS roles (
 INSERT OR IGNORE INTO roles (nombre) VALUES ('empresa');
 INSERT OR IGNORE INTO roles (nombre) VALUES ('administrador');
 INSERT OR IGNORE INTO roles (nombre) VALUES ('persona_natural');
+INSERT OR IGNORE INTO roles (nombre) VALUES ('operario');
 
 
 CREATE TABLE IF NOT EXISTS empresas (
@@ -141,5 +142,38 @@ CREATE TABLE IF NOT EXISTS registros_pendientes (
     creado INTEGER NOT NULL,
     vence INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS tarifas_aditamentos (
+    id_tarifa       INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_maquinaria   INTEGER NOT NULL REFERENCES maquinarias(id_maquinaria) ON DELETE CASCADE,
+    tipo_servicio   TEXT NOT NULL CHECK (tipo_servicio IN ('balde', 'martillo', 'transporte', 'estandar')),
+    tarifa_cop      REAL NOT NULL CHECK (tarifa_cop >= 0),
+    unidad          TEXT NOT NULL DEFAULT 'hora' CHECK (unidad IN ('hora', 'viaje')),
+    UNIQUE (id_maquinaria, tipo_servicio)
+);
+
+CREATE TABLE IF NOT EXISTS bitacora_horometros (
+    id_bitacora       INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_maquinaria     INTEGER NOT NULL REFERENCES maquinarias(id_maquinaria) ON DELETE CASCADE,
+    fecha             TEXT NOT NULL,
+    horometro_inicial REAL,
+    horometro_final   REAL,
+    horas_trabajadas  REAL NOT NULL DEFAULT 0 CHECK (horas_trabajadas >= 0),
+    horas_extras      REAL NOT NULL DEFAULT 0 CHECK (horas_extras >= 0),
+    horas_balde       REAL NOT NULL DEFAULT 0 CHECK (horas_balde >= 0),
+    horas_martillo    REAL NOT NULL DEFAULT 0 CHECK (horas_martillo >= 0),
+    combustible_gal   REAL NOT NULL DEFAULT 0 CHECK (combustible_gal >= 0),
+    estado_dia        TEXT NOT NULL DEFAULT 'operativa'
+                          CHECK (estado_dia IN ('operativa', 'inactiva', 'varada', 'reparacion', 'standby')),
+    observacion       TEXT,
+    origen            TEXT NOT NULL DEFAULT 'excel_etl'
+                          CHECK (origen IN ('excel_etl', 'agente_operario', 'admin')),
+    id_operario       INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    creado_en         TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (id_maquinaria, fecha, origen)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bitacora_maquina_fecha
+    ON bitacora_horometros(id_maquinaria, fecha);
 
 
